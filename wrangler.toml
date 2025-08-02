@@ -1,0 +1,33 @@
+name = "chronovault"
+compatibility_date = "2023-10-30"
+
+[env.production]
+account_id = "your-account-id"  # 需要替换为实际的Cloudflare账户ID
+
+[build]
+command = "npm run build"
+cwd = "."
+publish = "dist"
+
+[[build.environment_variables]]
+name = "NODE_VERSION"
+value = "18"
+
+[build.processing]
+css = true
+js = true
+html = true
+images = true
+
+[build.processing.css]
+minify = true
+
+[build.processing.js]
+minify = true
+
+[build.processing.html]
+minify = true
+
+# Pages Functions (可选，用于serverless函数)
+# [functions]
+# directory = "functions" 
