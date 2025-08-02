@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Clock,
@@ -10,6 +10,11 @@ import {
   User,
   Search,
   Filter,
+  Image,
+  Video,
+  Music,
+  File,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useWeb3 } from "../context/Web3Context";
@@ -17,6 +22,7 @@ import toast from "react-hot-toast";
 
 const VaultPage = () => {
   const { getUserSeals, getSeal, account, isConnected } = useWeb3();
+  const navigate = useNavigate();
   const [seals, setSeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,6 +55,50 @@ const VaultPage = () => {
       setLoading(false);
     }
   };
+
+
+
+  // 强制查看封印详情
+  const handleForceViewSeal = async (seal) => {
+    try {
+      // 直接导航到详情页，并传递强制解锁参数
+      navigate(`/seal/${seal.id}`, {
+        state: {
+          sealData: seal,
+          forceUnlock: true
+        }
+      });
+      toast.success("跳转到封印详情");
+    } catch (error) {
+      console.error("跳转失败:", error);
+      toast.error("跳转失败");
+    }
+  };
+
+  // 获取文件类型图标
+  const getFileIcon = (type) => {
+    switch (type) {
+      case 'image':
+        return <Image size={16} />;
+      case 'video':
+        return <Video size={16} />;
+      case 'audio':
+        return <Music size={16} />;
+      default:
+        return <File size={16} />;
+    }
+  };
+
+  // 格式化文件大小
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+
 
   const filteredSeals = seals.filter((seal) => {
     const title = seal.parsedContent?.title || "";
@@ -146,30 +196,29 @@ const VaultPage = () => {
           <div className="filter-buttons">
             <button
               onClick={() => setFilterStatus("all")}
-              className={`btn ${
-                filterStatus === "all" ? "btn-primary" : "btn-secondary"
-              } filter-btn`}
+              className={`btn ${filterStatus === "all" ? "btn-primary" : "btn-secondary"
+                } filter-btn`}
             >
               全部 ({seals.length})
             </button>
             <button
               onClick={() => setFilterStatus("locked")}
-              className={`btn ${
-                filterStatus === "locked" ? "btn-primary" : "btn-secondary"
-              } filter-btn`}
+              className={`btn ${filterStatus === "locked" ? "btn-primary" : "btn-secondary"
+                } filter-btn`}
             >
               <Lock size={16} />
               已锁定 ({seals.filter((s) => !s.isUnlocked).length})
             </button>
             <button
               onClick={() => setFilterStatus("unlocked")}
-              className={`btn ${
-                filterStatus === "unlocked" ? "btn-primary" : "btn-secondary"
-              } filter-btn`}
+              className={`btn ${filterStatus === "unlocked" ? "btn-primary" : "btn-secondary"
+                } filter-btn`}
             >
               <Unlock size={16} />
               已解锁 ({seals.filter((s) => s.isUnlocked).length})
             </button>
+
+
           </div>
         </motion.div>
 
@@ -213,9 +262,8 @@ const VaultPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 whileHover={{ y: -5, scale: 1.02 }}
-                className={`seal-card ${
-                  seal.isUnlocked ? "unlocked" : "locked"
-                }`}
+                className={`seal-card ${seal.isUnlocked ? "unlocked" : "locked"
+                  }`}
               >
                 <div className="seal-header">
                   <div className="seal-status">
@@ -239,7 +287,7 @@ const VaultPage = () => {
                   <p className="seal-preview">
                     {seal.isUnlocked
                       ? seal.parsedContent.content.slice(0, 100) +
-                        (seal.parsedContent.content.length > 100 ? "..." : "")
+                      (seal.parsedContent.content.length > 100 ? "..." : "")
                       : "🔒 内容已锁定，等待时间解锁..."}
                   </p>
 
@@ -282,12 +330,32 @@ const VaultPage = () => {
                     </span>
                   </div>
 
-                  <Link
-                    to={`/seal/${seal.id}`}
-                    className="btn btn-secondary seal-link"
-                  >
-                    查看详情
-                  </Link>
+                  <div className="seal-actions">
+                    <button
+                      onClick={() => handleForceViewSeal(seal)}
+                      className="btn btn-warning force-view-btn"
+                      title="强制查看封印内容"
+                    >
+                      🔓 强制查看
+                    </button>
+                    {seal.isUnlocked ? (
+                      <Link
+                        to={`/seal/${seal.id}`}
+                        state={{ sealData: seal }}
+                        className="btn btn-secondary seal-link"
+                      >
+                        查看详情
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => toast.error('封印尚未到期，无法查看详情')}
+                        className="btn btn-secondary seal-link disabled"
+                        title="封印尚未解锁，无法查看详情"
+                      >
+                        🔒 未解锁
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {seal.mediaIds && (
@@ -299,6 +367,8 @@ const VaultPage = () => {
             ))}
           </motion.div>
         )}
+
+
       </div>
 
       <style jsx>{`
@@ -520,6 +590,12 @@ const VaultPage = () => {
           border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        .seal-actions {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
         .seal-time {
           display: flex;
           align-items: center;
@@ -534,6 +610,33 @@ const VaultPage = () => {
           text-decoration: none;
         }
 
+        .seal-link.disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          background: rgba(255, 255, 255, 0.05) !important;
+          color: rgba(255, 255, 255, 0.5) !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .seal-link.disabled:hover {
+          transform: none;
+          background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .force-view-btn {
+          padding: 6px 12px;
+          font-size: 12px;
+          background: rgba(251, 191, 36, 0.2) !important;
+          color: #fbbf24 !important;
+          border-color: rgba(251, 191, 36, 0.3) !important;
+          transition: all 0.3s ease;
+        }
+
+        .force-view-btn:hover {
+          background: rgba(251, 191, 36, 0.3) !important;
+          transform: scale(1.05);
+        }
+
         .media-indicator {
           position: absolute;
           top: 12px;
@@ -544,6 +647,8 @@ const VaultPage = () => {
           font-size: 12px;
           color: rgba(255, 255, 255, 0.8);
         }
+
+
 
         @media (max-width: 768px) {
           .page-title {
@@ -573,9 +678,22 @@ const VaultPage = () => {
             align-items: stretch;
           }
 
+          .seal-actions {
+            justify-content: center;
+            gap: 8px;
+          }
+
+          .force-view-btn {
+            flex: 1;
+            min-width: 0;
+          }
+
           .seal-link {
             text-align: center;
+            flex: 1;
           }
+
+
         }
       `}</style>
     </div>

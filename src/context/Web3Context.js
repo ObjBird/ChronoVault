@@ -178,46 +178,67 @@ export const Web3Provider = ({ children }) => {
     }
   };
 
-  const getSeal = async (txHash) => {
+  const getSeal = async (id) => {
     try {
-      // 直接通过ethers获取交易收据
-      const receipt = await provider.getTransactionReceipt(txHash);
-      if (!receipt) {
-        toast.error("未找到对应的交易");
-        return null;
-      }
-
-      // 解析事件日志
-      const iface = new ethers.Interface(CONTRACT_ABI);
-      const dataStoredEvent = receipt.logs.find((log) => {
-        try {
-          const parsed = iface.parseLog(log);
-          return parsed.name === "DataStored";
-        } catch {
-          return false;
+      // 检查是否是method_call格式的ID
+      if (id.startsWith("method_call_")) {
+        const index = parseInt(id.replace("method_call_", ""));
+        if (isNaN(index)) {
+          toast.error("无效的封印ID格式");
+          return null;
         }
-      });
 
-      if (!dataStoredEvent) {
-        toast.error("未找到封印数据事件");
-        return null;
+        // 通过索引获取方法调用记录
+        const methodCall = await getMethodCall(index);
+        if (!methodCall) {
+          toast.error("未找到对应的封印记录");
+          return null;
+        }
+
+        return {
+          ...methodCall,
+          id: id, // 保持原始ID
+        };
+      } else {
+        // 原来的逻辑：处理交易哈希
+        const receipt = await provider.getTransactionReceipt(id);
+        if (!receipt) {
+          toast.error("未找到对应的交易");
+          return null;
+        }
+
+        // 解析事件日志
+        const iface = new ethers.Interface(CONTRACT_ABI);
+        const dataStoredEvent = receipt.logs.find((log) => {
+          try {
+            const parsed = iface.parseLog(log);
+            return parsed.name === "DataStored";
+          } catch {
+            return false;
+          }
+        });
+
+        if (!dataStoredEvent) {
+          toast.error("未找到封印数据事件");
+          return null;
+        }
+
+        const parsed = iface.parseLog(dataStoredEvent);
+        const decodedSeal = decodeSealData(parsed.args.data);
+
+        if (!decodedSeal) {
+          toast.error("解码封印数据失败");
+          return null;
+        }
+
+        return {
+          ...decodedSeal,
+          id: id,
+          txHash: id,
+          blockNumber: receipt.blockNumber,
+          timestamp: parsed.args.timestamp,
+        };
       }
-
-      const parsed = iface.parseLog(dataStoredEvent);
-      const decodedSeal = decodeSealData(parsed.args.data);
-
-      if (!decodedSeal) {
-        toast.error("解码封印数据失败");
-        return null;
-      }
-
-      return {
-        ...decodedSeal,
-        id: txHash,
-        txHash,
-        blockNumber: receipt.blockNumber,
-        timestamp: parsed.args.timestamp,
-      };
     } catch (error) {
       console.error("获取封印数据失败:", error);
       toast.error("获取封印数据失败");
@@ -234,7 +255,7 @@ export const Web3Provider = ({ children }) => {
     try {
       // 使用新的读取方法获取所有方法调用记录
       const allMethodCalls = await contract.getAllMethodCalls();
-      
+
       // 过滤出当前用户的封印数据
       const userSeals = allMethodCalls
         .filter(call => call.caller.toLowerCase() === userAddress.toLowerCase())
@@ -244,6 +265,7 @@ export const Web3Provider = ({ children }) => {
             if (decodedSeal) {
               return {
                 id: `method_call_${index}`,
+                methodCallIndex: index, // 保存方法调用索引
                 ...decodedSeal,
                 caller: call.caller,
                 methodName: call.methodName,
@@ -364,7 +386,7 @@ export const Web3Provider = ({ children }) => {
     try {
       const methodCall = await contract.getMethodCall(index);
       const decodedSeal = decodeSealData(methodCall.data);
-      
+
       if (decodedSeal) {
         return {
           ...decodedSeal,
@@ -390,7 +412,7 @@ export const Web3Provider = ({ children }) => {
 
     try {
       const allCalls = await contract.getAllMethodCalls();
-      
+
       return allCalls.map((call, index) => {
         try {
           const decodedSeal = decodeSealData(call.data);

@@ -1,53 +1,58 @@
-// 文件上传服务
-// 注意：这是前端模拟实现，实际项目中需要连接真实的后端服务
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.chronovault.example.com';
+// 文件上传服务 - 使用 IndexedDB 存储
+import indexedDBService from './indexedDBService';
 
 /**
- * 上传文件到后端服务
+ * 生成唯一文件ID
+ * @returns {string} 文件ID
+ */
+const generateFileId = () => {
+    return `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
+/**
+ * 上传文件并存储到 IndexedDB
  * @param {File} file - 要上传的文件
+ * @param {string} sealId - 关联的封印ID (可选)
  * @returns {Promise<string>} 返回文件ID
  */
-export const uploadFile = async (file) => {
+export const uploadFile = async (file, sealId = null) => {
     try {
-        // 模拟文件上传过程
-        const formData = new FormData();
-        formData.append('file', file);
+        // 验证文件
+        const validation = validateFile(file);
+        if (!validation.valid) {
+            throw new Error(validation.errors.join(', '));
+        }
 
-        // 在实际项目中，这里应该是真实的API调用
-        // const response = await fetch(`${API_BASE_URL}/upload`, {
-        //   method: 'POST',
-        //   body: formData,
-        // });
+        // 生成文件ID
+        const fileId = generateFileId();
 
         // 模拟上传延迟
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
 
-        // 模拟成功响应，返回一个假的文件ID
-        const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // 存储文件到 IndexedDB
+        const fileData = await indexedDBService.storeFile(file, fileId, sealId);
 
-        // 在本地存储中保存文件信息（仅用于演示）
-        const fileInfo = {
-            id: fileId,
-            name: file.name,
-            size: file.size,
-            type: file.type.split('/')[0], // image, audio, video
-            mimeType: file.type,
-            uploadedAt: new Date().toISOString(),
-            // 在实际项目中，这里应该是服务器返回的URL
-            url: URL.createObjectURL(file),
-        };
-
-        // 保存到localStorage（仅用于演示）
-        const existingFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '{}');
-        existingFiles[fileId] = fileInfo;
-        localStorage.setItem('uploadedFiles', JSON.stringify(existingFiles));
-
-        console.log('文件上传成功:', fileInfo);
+        console.log('文件上传并存储成功:', fileData);
         return fileId;
     } catch (error) {
         console.error('文件上传失败:', error);
-        throw new Error('文件上传失败');
+        throw new Error(`文件上传失败: ${error.message}`);
+    }
+};
+
+/**
+ * 批量上传文件
+ * @param {File[]} files - 要上传的文件数组
+ * @param {string} sealId - 关联的封印ID (可选)
+ * @returns {Promise<string[]>} 返回文件ID数组
+ */
+export const uploadFiles = async (files, sealId = null) => {
+    try {
+        const uploadPromises = files.map(file => uploadFile(file, sealId));
+        return await Promise.all(uploadPromises);
+    } catch (error) {
+        console.error('批量文件上传失败:', error);
+        throw new Error(`批量文件上传失败: ${error.message}`);
     }
 };
 
@@ -58,25 +63,59 @@ export const uploadFile = async (file) => {
  */
 export const getFileById = async (fileId) => {
     try {
-        // 在实际项目中，这里应该是API调用
-        // const response = await fetch(`${API_BASE_URL}/files/${fileId}`);
-        // const fileInfo = await response.json();
-
-        // 模拟API延迟
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // 从localStorage获取文件信息（仅用于演示）
-        const existingFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '{}');
-        const fileInfo = existingFiles[fileId];
-
-        if (!fileInfo) {
-            throw new Error('文件不存在');
-        }
-
+        const fileInfo = await indexedDBService.getFileById(fileId);
         return fileInfo;
     } catch (error) {
         console.error('获取文件失败:', error);
-        throw new Error('获取文件失败');
+        throw new Error(`获取文件失败: ${error.message}`);
+    }
+};
+
+/**
+ * 根据封印ID获取所有相关文件
+ * @param {string} sealId - 封印ID
+ * @returns {Promise<Array>} 文件列表
+ */
+export const getFilesBySealId = async (sealId) => {
+    try {
+        const files = await indexedDBService.getFilesBySealId(sealId);
+        return files;
+    } catch (error) {
+        console.error('获取封印文件失败:', error);
+        throw new Error(`获取封印文件失败: ${error.message}`);
+    }
+};
+
+/**
+ * 更新文件的封印ID关联
+ * @param {string} fileId - 文件ID
+ * @param {string} sealId - 封印ID
+ * @returns {Promise<boolean>} 更新结果
+ */
+export const updateFileSealId = async (fileId, sealId) => {
+    try {
+        await indexedDBService.updateFileSealId(fileId, sealId);
+        return true;
+    } catch (error) {
+        console.error('更新文件封印ID失败:', error);
+        throw new Error(`更新文件封印ID失败: ${error.message}`);
+    }
+};
+
+/**
+ * 批量更新文件的封印ID关联
+ * @param {string[]} fileIds - 文件ID数组
+ * @param {string} sealId - 封印ID
+ * @returns {Promise<boolean>} 更新结果
+ */
+export const updateFilesSealId = async (fileIds, sealId) => {
+    try {
+        const updatePromises = fileIds.map(fileId => updateFileSealId(fileId, sealId));
+        await Promise.all(updatePromises);
+        return true;
+    } catch (error) {
+        console.error('批量更新文件封印ID失败:', error);
+        throw new Error(`批量更新文件封印ID失败: ${error.message}`);
     }
 };
 
@@ -87,24 +126,12 @@ export const getFileById = async (fileId) => {
  */
 export const deleteFile = async (fileId) => {
     try {
-        // 在实际项目中，这里应该是API调用
-        // const response = await fetch(`${API_BASE_URL}/files/${fileId}`, {
-        //   method: 'DELETE',
-        // });
-
-        // 模拟API延迟
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // 从localStorage删除文件信息（仅用于演示）
-        const existingFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '{}');
-        delete existingFiles[fileId];
-        localStorage.setItem('uploadedFiles', JSON.stringify(existingFiles));
-
+        await indexedDBService.deleteFile(fileId);
         console.log('文件删除成功:', fileId);
         return true;
     } catch (error) {
         console.error('删除文件失败:', error);
-        throw new Error('删除文件失败');
+        throw new Error(`删除文件失败: ${error.message}`);
     }
 };
 
@@ -115,36 +142,28 @@ export const deleteFile = async (fileId) => {
  */
 export const getFileList = async (options = {}) => {
     try {
-        // 在实际项目中，这里应该是API调用
-        // const queryParams = new URLSearchParams(options);
-        // const response = await fetch(`${API_BASE_URL}/files?${queryParams}`);
-        // const files = await response.json();
-
-        // 模拟API延迟
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // 从localStorage获取文件列表（仅用于演示）
-        const existingFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '{}');
-        const fileList = Object.values(existingFiles);
+        let files = await indexedDBService.getAllFiles();
 
         // 应用筛选条件
-        let filteredFiles = fileList;
-
         if (options.type) {
-            filteredFiles = filteredFiles.filter(file => file.type === options.type);
+            files = files.filter(file => file.type === options.type);
         }
 
-        if (options.limit) {
-            filteredFiles = filteredFiles.slice(0, options.limit);
+        if (options.sealId) {
+            files = files.filter(file => file.sealId === options.sealId);
         }
 
         // 按上传时间排序
-        filteredFiles.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+        files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
 
-        return filteredFiles;
+        if (options.limit) {
+            files = files.slice(0, options.limit);
+        }
+
+        return files;
     } catch (error) {
         console.error('获取文件列表失败:', error);
-        throw new Error('获取文件列表失败');
+        throw new Error(`获取文件列表失败: ${error.message}`);
     }
 };
 
@@ -257,4 +276,36 @@ export const generateThumbnail = (file, options = {}) => {
 
         img.src = URL.createObjectURL(file);
     });
+};
+
+/**
+ * 从文件对象创建预览URL
+ * @param {File} file - 文件对象
+ * @returns {string} 预览URL
+ */
+export const createPreviewUrl = (file) => {
+    return URL.createObjectURL(file);
+};
+
+/**
+ * 释放预览URL
+ * @param {string} url - 预览URL
+ */
+export const revokePreviewUrl = (url) => {
+    URL.revokeObjectURL(url);
+};
+
+/**
+ * 清理所有文件数据（用于开发/测试）
+ * @returns {Promise<boolean>} 清理结果
+ */
+export const clearAllFiles = async () => {
+    try {
+        await indexedDBService.clearAll();
+        console.log('所有文件数据已清理');
+        return true;
+    } catch (error) {
+        console.error('清理文件数据失败:', error);
+        throw new Error(`清理文件数据失败: ${error.message}`);
+    }
 }; 

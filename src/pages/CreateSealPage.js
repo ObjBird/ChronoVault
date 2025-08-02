@@ -4,7 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { Calendar, Clock, FileText, Image, Music, Video, Upload, X, Send } from 'lucide-react';
 import { format, addHours } from 'date-fns';
 import { useWeb3 } from '../context/Web3Context';
-import { uploadFile } from '../services/fileService';
+import { uploadFile, updateFilesSealId } from '../services/fileService';
 import toast from 'react-hot-toast';
 
 const CreateSealPage = () => {
@@ -111,11 +111,16 @@ const CreateSealPage = () => {
         try {
             // Upload files if any
             let mediaIds = '';
+            let fileIds = [];
             if (files.length > 0) {
                 setIsUploading(true);
+                toast.loading('正在上传文件到本地存储...', { id: 'uploading-files' });
+
                 const uploadPromises = files.map(({ file }) => uploadFile(file));
-                const uploadResults = await Promise.all(uploadPromises);
-                mediaIds = uploadResults.join(',');
+                fileIds = await Promise.all(uploadPromises);
+                mediaIds = fileIds.join(',');
+
+                toast.success('文件上传完成', { id: 'uploading-files' });
                 setIsUploading(false);
             }
 
@@ -124,6 +129,7 @@ const CreateSealPage = () => {
                 title: formData.title || `时间封印 ${format(new Date(), 'yyyy-MM-dd HH:mm')}`, // 如果没有标题，使用默认标题
                 content: formData.content,
                 createdAt: new Date().toISOString(),
+                fileCount: files.length, // 添加文件数量信息
             };
 
             // Convert unlock time to timestamp
@@ -137,6 +143,18 @@ const CreateSealPage = () => {
             );
 
             if (sealId !== null) {
+                // Update file seal IDs to associate them with this seal
+                if (fileIds.length > 0) {
+                    try {
+                        await updateFilesSealId(fileIds, sealId);
+                        console.log('文件已成功关联到封印:', sealId);
+                        toast.success(`${fileIds.length} 个文件已关联到封印`);
+                    } catch (error) {
+                        console.error('关联文件到封印失败:', error);
+                        toast.error('文件关联失败，但封印创建成功');
+                    }
+                }
+
                 // Reset form
                 const defaultUnlockTime = addHours(new Date(), 1);
                 setFormData({
