@@ -2,13 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { ethers } from "ethers";
 import toast from "react-hot-toast";
 import { ABI } from "./abi/DataToZeroAddress";
-import {
-  apolloClient,
-  GET_USER_SEALS,
-  GET_SEAL_BY_TX_HASH,
-  decodeSealData,
-} from "../apollo/client";
-import { da } from "date-fns/locale";
 
 const Web3Context = createContext();
 
@@ -43,7 +36,7 @@ export const Web3Provider = ({ children }) => {
 
   // 智能合约配置 (需要部署到 Monad 测试网)
   // TODO: 请部署 ChronoVault 合约到 Monad 测试网并替换此地址
-  const CONTRACT_ADDRESS = "0xB095DE5c9d0bceF7B1Bc3e1B04da28D9852Ad36A"; // 占位符地址 - 需要替换
+  const CONTRACT_ADDRESS = "0xAB00cF2B1f57693636D32fa50Bb3A25c04DB3a52"; // 占位符地址 - 需要替换
   const CONTRACT_ABI = ABI;
 
   console.log(ABI);
@@ -156,28 +149,62 @@ export const Web3Provider = ({ children }) => {
     }
   };
 
+  // 解码封印数据的辅助函数
+  const decodeSealData = (encodedData) => {
+    try {
+      // 如果数据是hex格式，先转换为字符串
+      let decodedString = encodedData;
+      if (encodedData.startsWith("0x")) {
+        // 使用ethers.js的toUtf8String方法将hex转换为UTF-8字符串
+        decodedString = ethers.toUtf8String(encodedData);
+      }
+
+      const sealData = JSON.parse(decodedString);
+
+      // 计算是否已解锁
+      const isUnlocked = sealData.unlockTime * 1000 <= Date.now();
+
+      return {
+        ...sealData,
+        isUnlocked,
+        parsedContent:
+          typeof sealData.content === "string"
+            ? JSON.parse(sealData.content)
+            : sealData.content,
+      };
+    } catch (error) {
+      console.error("解码封印数据失败:", error);
+      return null;
+    }
+  };
+
   const getSeal = async (txHash) => {
     try {
-      // 使用Apollo Client查询封印数据
-      const { data, error } = await apolloClient.query({
-        query: GET_SEAL_BY_TX_HASH,
-        variables: { txHash },
-        fetchPolicy: "network-only", // 强制从网络获取最新数据
+      // 直接通过ethers获取交易收据
+      const receipt = await provider.getTransactionReceipt(txHash);
+      if (!receipt) {
+        toast.error("未找到对应的交易");
+        return null;
+      }
+
+      // 解析事件日志
+      const iface = new ethers.Interface(CONTRACT_ABI);
+      const dataStoredEvent = receipt.logs.find((log) => {
+        try {
+          const parsed = iface.parseLog(log);
+          return parsed.name === "DataStored";
+        } catch {
+          return false;
+        }
       });
 
-      if (error) {
-        console.error("GraphQL查询错误:", error);
-        toast.error("查询封印数据失败");
+      if (!dataStoredEvent) {
+        toast.error("未找到封印数据事件");
         return null;
       }
 
-      if (!data?.dataStoreds || data.dataStoreds.length === 0) {
-        toast.error("未找到对应的封印数据");
-        return null;
-      }
-
-      const sealEvent = data.dataStoreds[0];
-      const decodedSeal = decodeSealData(sealEvent.data);
+      const parsed = iface.parseLog(dataStoredEvent);
+      const decodedSeal = decodeSealData(parsed.args.data);
 
       if (!decodedSeal) {
         toast.error("解码封印数据失败");
@@ -186,9 +213,10 @@ export const Web3Provider = ({ children }) => {
 
       return {
         ...decodedSeal,
-        txHash: sealEvent.transactionHash,
-        blockNumber: sealEvent.blockNumber,
-        timestamp: sealEvent.timestamp,
+        id: txHash,
+        txHash,
+        blockNumber: receipt.blockNumber,
+        timestamp: parsed.args.timestamp,
       };
     } catch (error) {
       console.error("获取封印数据失败:", error);
@@ -198,47 +226,191 @@ export const Web3Provider = ({ children }) => {
   };
 
   const getUserSeals = async (userAddress = account) => {
-    if (!userAddress) {
-      console.warn("用户地址不存在");
+    if (!userAddress || !contract || !provider) {
+      console.warn("用户地址或合约不存在");
       return [];
     }
 
     try {
-      // 使用Apollo Client查询用户的所有封印
-      const { data, error } = await apolloClient.query({
-        query: GET_USER_SEALS,
-        variables: { userAddress: userAddress.toLowerCase() },
-        fetchPolicy: "network-only",
-      });
-
-      if (error) {
-        console.error("GraphQL查询错误:", error);
-        return [];
-      }
-      console.log(data, 123123);
-      if (!data?.dataStoreds) {
-        return [];
-      }
-
-      // 处理查询结果，解码每个封印数据
-      const seals = data.dataStoreds
-        .map((sealEvent) => {
-          const decodedSeal = decodeSealData(sealEvent.data);
-          if (!decodedSeal) return null;
-
-          return {
-            id: sealEvent.transactionHash, // 使用交易哈希作为ID
-            ...decodedSeal,
-            txHash: sealEvent.transactionHash,
-            blockNumber: sealEvent.blockNumber,
-            timestamp: sealEvent.timestamp,
-          };
+      // 使用新的读取方法获取所有方法调用记录
+      const allMethodCalls = await contract.getAllMethodCalls();
+      
+      // 过滤出当前用户的封印数据
+      const userSeals = allMethodCalls
+        .filter(call => call.caller.toLowerCase() === userAddress.toLowerCase())
+        .map((call, index) => {
+          try {
+            const decodedSeal = decodeSealData(call.data);
+            if (decodedSeal) {
+              return {
+                id: `method_call_${index}`,
+                ...decodedSeal,
+                caller: call.caller,
+                methodName: call.methodName,
+                timestamp: call.timestamp,
+              };
+            }
+            return null;
+          } catch (error) {
+            console.error("解码单个封印失败:", error);
+            return null;
+          }
         })
-        .filter((seal) => seal !== null);
+        .filter(seal => seal !== null);
+
+      // 按时间戳排序（最新的在前）
+      userSeals.sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
+
+      return userSeals;
+    } catch (error) {
+      console.error("获取用户封印失败:", error);
+      // 如果新方法失败，回退到原来的事件查询方法
+      return await getUserSealsLegacy(userAddress);
+    }
+  };
+
+  // 保留原来的事件查询方法作为备用
+  const getUserSealsLegacy = async (userAddress = account) => {
+    if (!userAddress || !contract || !provider) {
+      console.warn("用户地址或合约不存在");
+      return [];
+    }
+
+    try {
+      // 获取当前区块号
+      const currentBlock = await provider.getBlockNumber();
+
+      // 分批查询事件，避免请求负载过大
+      const batchSize = 10000; // 每次查询10000个区块
+      const filter = contract.filters.DataStored(userAddress);
+      const allEvents = [];
+
+      // 从最近的区块开始往前查询，限制查询范围以避免超时
+      const maxBlocksToQuery = 50000; // 最多查询最近50000个区块
+      const startBlock = Math.max(0, currentBlock - maxBlocksToQuery);
+
+      for (
+        let fromBlock = startBlock;
+        fromBlock <= currentBlock;
+        fromBlock += batchSize
+      ) {
+        const toBlock = Math.min(fromBlock + batchSize - 1, currentBlock);
+
+        try {
+          console.log(`查询区块范围: ${fromBlock} - ${toBlock}`);
+          const events = await contract.queryFilter(filter, fromBlock, toBlock);
+          allEvents.push(...events);
+        } catch (batchError) {
+          console.warn(`查询区块 ${fromBlock}-${toBlock} 失败:`, batchError);
+          // 继续查询下一批，不中断整个过程
+        }
+      }
+
+      console.log("Found events:", allEvents.length);
+
+      // 处理事件数据
+      const seals = [];
+
+      for (const event of allEvents) {
+        try {
+          const decodedSeal = decodeSealData(event.args.data);
+          if (decodedSeal) {
+            seals.push({
+              id: event.transactionHash,
+              ...decodedSeal,
+              txHash: event.transactionHash,
+              blockNumber: event.blockNumber,
+              timestamp: event.args.timestamp,
+            });
+          }
+        } catch (error) {
+          console.error("解码单个封印失败:", error);
+        }
+      }
+
+      // 按时间戳排序（最新的在前）
+      seals.sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
 
       return seals;
     } catch (error) {
       console.error("获取用户封印失败:", error);
+      return [];
+    }
+  };
+
+  // 获取调用总数
+  const getCallCount = async () => {
+    if (!contract) {
+      console.warn("合约不存在");
+      return 0;
+    }
+
+    try {
+      const count = await contract.callCount();
+      return Number(count);
+    } catch (error) {
+      console.error("获取调用总数失败:", error);
+      return 0;
+    }
+  };
+
+  // 根据索引获取单个方法调用记录
+  const getMethodCall = async (index) => {
+    if (!contract) {
+      console.warn("合约不存在");
+      return null;
+    }
+
+    try {
+      const methodCall = await contract.getMethodCall(index);
+      const decodedSeal = decodeSealData(methodCall.data);
+      
+      if (decodedSeal) {
+        return {
+          ...decodedSeal,
+          caller: methodCall.caller,
+          methodName: methodCall.methodName,
+          timestamp: methodCall.timestamp,
+          index,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("获取方法调用记录失败:", error);
+      return null;
+    }
+  };
+
+  // 获取所有方法调用记录
+  const getAllMethodCalls = async () => {
+    if (!contract) {
+      console.warn("合约不存在");
+      return [];
+    }
+
+    try {
+      const allCalls = await contract.getAllMethodCalls();
+      
+      return allCalls.map((call, index) => {
+        try {
+          const decodedSeal = decodeSealData(call.data);
+          if (decodedSeal) {
+            return {
+              ...decodedSeal,
+              caller: call.caller,
+              methodName: call.methodName,
+              timestamp: call.timestamp,
+              index,
+            };
+          }
+          return null;
+        } catch (error) {
+          console.error("解码方法调用记录失败:", error);
+          return null;
+        }
+      }).filter(call => call !== null);
+    } catch (error) {
+      console.error("获取所有方法调用记录失败:", error);
       return [];
     }
   };
@@ -279,6 +451,9 @@ export const Web3Provider = ({ children }) => {
     createSeal,
     getSeal,
     getUserSeals,
+    getCallCount,
+    getMethodCall,
+    getAllMethodCalls,
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;
