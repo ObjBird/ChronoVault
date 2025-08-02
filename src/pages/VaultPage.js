@@ -1,307 +1,307 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Clock, Lock, Unlock, Calendar, Tag, User, Search, Filter } from 'lucide-react';
-import { format } from 'date-fns';
-import { useWeb3 } from '../context/Web3Context';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  Clock,
+  Lock,
+  Unlock,
+  Calendar,
+  Tag,
+  User,
+  Search,
+  Filter,
+} from "lucide-react";
+import { format } from "date-fns";
+import { useWeb3 } from "../context/Web3Context";
+import toast from "react-hot-toast";
 
 const VaultPage = () => {
-    const { getUserSeals, getSeal, account, isConnected } = useWeb3();
-    const [seals, setSeals] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all'); // all, locked, unlocked
+  const { getUserSeals, getSeal, account, isConnected } = useWeb3();
+  const [seals, setSeals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all"); // all, locked, unlocked
 
-    useEffect(() => {
-        if (isConnected && account) {
-            loadUserSeals();
-        } else {
-            setLoading(false);
-        }
-    }, [isConnected, account]);
-
-    const loadUserSeals = async () => {
-        setLoading(true);
-        try {
-            const sealIds = await getUserSeals();
-            const sealPromises = sealIds.map(async (id) => {
-                const sealData = await getSeal(id);
-                if (sealData) {
-                    try {
-                        const content = JSON.parse(sealData.content);
-                        return {
-                            id,
-                            ...sealData,
-                            parsedContent: content,
-                            isUnlocked: sealData.unlockTime * 1000 <= Date.now(),
-                        };
-                    } catch {
-                        return {
-                            id,
-                            ...sealData,
-                            parsedContent: { title: '未知标题', content: sealData.content },
-                            isUnlocked: sealData.unlockTime * 1000 <= Date.now(),
-                        };
-                    }
-                }
-                return null;
-            });
-
-            const resolvedSeals = await Promise.all(sealPromises);
-            const validSeals = resolvedSeals.filter(seal => seal !== null);
-
-            // Sort by creation time (newest first)
-            validSeals.sort((a, b) =>
-                new Date(b.parsedContent.createdAt || 0) - new Date(a.parsedContent.createdAt || 0)
-            );
-
-            setSeals(validSeals);
-        } catch (error) {
-            console.error('加载封印失败:', error);
-            toast.error('加载封印失败');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const filteredSeals = seals.filter(seal => {
-        const matchesSearch =
-            seal.parsedContent.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            seal.parsedContent.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (seal.parsedContent.tags && seal.parsedContent.tags.some(tag =>
-                tag.toLowerCase().includes(searchTerm.toLowerCase())
-            ));
-
-        const matchesFilter =
-            filterStatus === 'all' ||
-            (filterStatus === 'locked' && !seal.isUnlocked) ||
-            (filterStatus === 'unlocked' && seal.isUnlocked);
-
-        return matchesSearch && matchesFilter;
-    });
-
-    const formatDate = (timestamp) => {
-        return format(new Date(timestamp * 1000), 'yyyy年MM月dd日 HH:mm');
-    };
-
-    const getTimeRemaining = (timestamp) => {
-        const now = Date.now();
-        const target = timestamp * 1000;
-        const diff = target - now;
-
-        if (diff <= 0) return '已解锁';
-
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (days > 0) return `${days}天后解锁`;
-        if (hours > 0) return `${hours}小时后解锁`;
-        return `${minutes}分钟后解锁`;
-    };
-
-    if (!isConnected) {
-        return (
-            <div className="vault-page">
-                <div className="container">
-                    <div className="not-connected">
-                        <motion.div
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="not-connected-content"
-                        >
-                            <Clock size={80} />
-                            <h2>请先连接钱包</h2>
-                            <p>连接钱包后即可查看您的时间封印金库</p>
-                        </motion.div>
-                    </div>
-                </div>
-            </div>
-        );
+  useEffect(() => {
+    if (isConnected && account) {
+      loadUserSeals();
+    } else {
+      setLoading(false);
     }
+  }, [isConnected, account]);
 
+  const loadUserSeals = async () => {
+    setLoading(true);
+    try {
+      // 直接从Apollo Client获取处理好的封印数据
+      const seals = await getUserSeals();
+      console.log(seals, 111111);
+      // 按创建时间排序（最新的在前）
+      seals.sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      );
+
+      setSeals(seals);
+    } catch (error) {
+      console.error("加载封印失败:", error);
+      toast.error("加载封印失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredSeals = seals.filter((seal) => {
+    const title = seal.parsedContent?.title || "";
+    const content = seal.parsedContent?.content || "";
+    const tags = seal.parsedContent?.tags || [];
+
+    const matchesSearch =
+      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (tags &&
+        tags.some((tag) =>
+          tag.toLowerCase().includes(searchTerm.toLowerCase())
+        ));
+
+    const matchesFilter =
+      filterStatus === "all" ||
+      (filterStatus === "locked" && !seal.isUnlocked) ||
+      (filterStatus === "unlocked" && seal.isUnlocked);
+
+    return matchesSearch && matchesFilter;
+  });
+
+  const formatDate = (timestamp) => {
+    return format(new Date(timestamp * 1000), "yyyy年MM月dd日 HH:mm");
+  };
+
+  const getTimeRemaining = (timestamp) => {
+    const now = Date.now();
+    const target = timestamp * 1000;
+    const diff = target - now;
+
+    if (diff <= 0) return "已解锁";
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) return `${days}天后解锁`;
+    if (hours > 0) return `${hours}小时后解锁`;
+    return `${minutes}分钟后解锁`;
+  };
+
+  if (!isConnected) {
     return (
-        <div className="vault-page">
-            <div className="container">
-                <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
-                    className="page-header"
-                >
-                    <h1 className="page-title gradient-text-primary">我的时间金库</h1>
-                    <p className="page-subtitle">
-                        这里保存着您所有的珍贵记忆，等待着时间的钥匙将它们解锁
-                    </p>
-                </motion.div>
+      <div className="vault-page">
+        <div className="container">
+          <div className="not-connected">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="not-connected-content"
+            >
+              <Clock size={80} />
+              <h2>请先连接钱包</h2>
+              <p>连接钱包后即可查看您的时间封印金库</p>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
-                    className="vault-controls"
-                >
-                    <div className="search-bar">
-                        <Search size={20} />
-                        <input
-                            type="text"
-                            placeholder="搜索封印标题、内容或标签..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="input search-input"
-                        />
-                    </div>
+  return (
+    <div className="vault-page">
+      <div className="container">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="page-header"
+        >
+          <h1 className="page-title gradient-text-primary">我的时间金库</h1>
+          <p className="page-subtitle">
+            这里保存着您所有的珍贵记忆，等待着时间的钥匙将它们解锁
+          </p>
+        </motion.div>
 
-                    <div className="filter-buttons">
-                        <button
-                            onClick={() => setFilterStatus('all')}
-                            className={`btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-secondary'} filter-btn`}
-                        >
-                            全部 ({seals.length})
-                        </button>
-                        <button
-                            onClick={() => setFilterStatus('locked')}
-                            className={`btn ${filterStatus === 'locked' ? 'btn-primary' : 'btn-secondary'} filter-btn`}
-                        >
-                            <Lock size={16} />
-                            已锁定 ({seals.filter(s => !s.isUnlocked).length})
-                        </button>
-                        <button
-                            onClick={() => setFilterStatus('unlocked')}
-                            className={`btn ${filterStatus === 'unlocked' ? 'btn-primary' : 'btn-secondary'} filter-btn`}
-                        >
-                            <Unlock size={16} />
-                            已解锁 ({seals.filter(s => s.isUnlocked).length})
-                        </button>
-                    </div>
-                </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="vault-controls"
+        >
+          <div className="search-bar">
+            <Search size={20} />
+            <input
+              type="text"
+              placeholder="搜索封印标题、内容或标签..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input search-input"
+            />
+          </div>
 
-                {loading ? (
-                    <div className="loading-state">
-                        <div className="spinner" />
-                        <p>正在加载您的时间封印...</p>
+          <div className="filter-buttons">
+            <button
+              onClick={() => setFilterStatus("all")}
+              className={`btn ${
+                filterStatus === "all" ? "btn-primary" : "btn-secondary"
+              } filter-btn`}
+            >
+              全部 ({seals.length})
+            </button>
+            <button
+              onClick={() => setFilterStatus("locked")}
+              className={`btn ${
+                filterStatus === "locked" ? "btn-primary" : "btn-secondary"
+              } filter-btn`}
+            >
+              <Lock size={16} />
+              已锁定 ({seals.filter((s) => !s.isUnlocked).length})
+            </button>
+            <button
+              onClick={() => setFilterStatus("unlocked")}
+              className={`btn ${
+                filterStatus === "unlocked" ? "btn-primary" : "btn-secondary"
+              } filter-btn`}
+            >
+              <Unlock size={16} />
+              已解锁 ({seals.filter((s) => s.isUnlocked).length})
+            </button>
+          </div>
+        </motion.div>
+
+        {loading ? (
+          <div className="loading-state">
+            <div className="spinner" />
+            <p>正在加载您的时间封印...</p>
+          </div>
+        ) : filteredSeals.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="empty-state"
+          >
+            <Clock size={80} />
+            <h3>
+              {seals.length === 0 ? "还没有任何时间封印" : "没有找到匹配的封印"}
+            </h3>
+            <p>
+              {seals.length === 0
+                ? "创建您的第一个时间封印，开始您的记忆之旅"
+                : "尝试调整搜索条件或筛选器"}
+            </p>
+            {seals.length === 0 && (
+              <Link to="/create" className="btn btn-primary">
+                创建第一个封印
+              </Link>
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            className="seals-grid"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            {filteredSeals.map((seal, index) => (
+              <motion.div
+                key={seal.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                whileHover={{ y: -5, scale: 1.02 }}
+                className={`seal-card ${
+                  seal.isUnlocked ? "unlocked" : "locked"
+                }`}
+              >
+                <div className="seal-header">
+                  <div className="seal-status">
+                    {seal.isUnlocked ? (
+                      <>
+                        <Unlock size={16} />
+                        <span>已解锁</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={16} />
+                        <span>锁定中</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="seal-id">#{seal.id}</div>
+                </div>
+
+                <div className="seal-content">
+                  <h3 className="seal-title">{seal.parsedContent.title}</h3>
+                  <p className="seal-preview">
+                    {seal.isUnlocked
+                      ? seal.parsedContent.content.slice(0, 100) +
+                        (seal.parsedContent.content.length > 100 ? "..." : "")
+                      : "🔒 内容已锁定，等待时间解锁..."}
+                  </p>
+
+                  {seal.parsedContent.emotion && (
+                    <div className="seal-emotion">
+                      <span className="emotion-label">当时心境：</span>
+                      <span className="emotion-value">
+                        {seal.parsedContent.emotion}
+                      </span>
                     </div>
-                ) : filteredSeals.length === 0 ? (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="empty-state"
-                    >
-                        <Clock size={80} />
-                        <h3>
-                            {seals.length === 0
-                                ? '还没有任何时间封印'
-                                : '没有找到匹配的封印'
-                            }
-                        </h3>
-                        <p>
-                            {seals.length === 0
-                                ? '创建您的第一个时间封印，开始您的记忆之旅'
-                                : '尝试调整搜索条件或筛选器'
-                            }
-                        </p>
-                        {seals.length === 0 && (
-                            <Link to="/create" className="btn btn-primary">
-                                创建第一个封印
-                            </Link>
+                  )}
+
+                  {seal.parsedContent.tags &&
+                    seal.parsedContent.tags.length > 0 && (
+                      <div className="seal-tags">
+                        {seal.parsedContent.tags
+                          .slice(0, 3)
+                          .map((tag, tagIndex) => (
+                            <span key={tagIndex} className="tag">
+                              <Tag size={12} />
+                              {tag}
+                            </span>
+                          ))}
+                        {seal.parsedContent.tags.length > 3 && (
+                          <span className="tag-more">
+                            +{seal.parsedContent.tags.length - 3}
+                          </span>
                         )}
-                    </motion.div>
-                ) : (
-                    <motion.div
-                        className="seals-grid"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                    >
-                        {filteredSeals.map((seal, index) => (
-                            <motion.div
-                                key={seal.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: index * 0.1 }}
-                                whileHover={{ y: -5, scale: 1.02 }}
-                                className={`seal-card ${seal.isUnlocked ? 'unlocked' : 'locked'}`}
-                            >
-                                <div className="seal-header">
-                                    <div className="seal-status">
-                                        {seal.isUnlocked ? (
-                                            <>
-                                                <Unlock size={16} />
-                                                <span>已解锁</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Lock size={16} />
-                                                <span>锁定中</span>
-                                            </>
-                                        )}
-                                    </div>
-                                    <div className="seal-id">#{seal.id}</div>
-                                </div>
+                      </div>
+                    )}
+                </div>
 
-                                <div className="seal-content">
-                                    <h3 className="seal-title">{seal.parsedContent.title}</h3>
-                                    <p className="seal-preview">
-                                        {seal.isUnlocked
-                                            ? seal.parsedContent.content.slice(0, 100) + (seal.parsedContent.content.length > 100 ? '...' : '')
-                                            : '🔒 内容已锁定，等待时间解锁...'
-                                        }
-                                    </p>
+                <div className="seal-footer">
+                  <div className="seal-time">
+                    <Calendar size={14} />
+                    <span>
+                      {seal.isUnlocked
+                        ? `已于 ${formatDate(seal.unlockTime)} 解锁`
+                        : getTimeRemaining(seal.unlockTime)}
+                    </span>
+                  </div>
 
-                                    {seal.parsedContent.emotion && (
-                                        <div className="seal-emotion">
-                                            <span className="emotion-label">当时心境：</span>
-                                            <span className="emotion-value">{seal.parsedContent.emotion}</span>
-                                        </div>
-                                    )}
+                  <Link
+                    to={`/seal/${seal.id}`}
+                    className="btn btn-secondary seal-link"
+                  >
+                    查看详情
+                  </Link>
+                </div>
 
-                                    {seal.parsedContent.tags && seal.parsedContent.tags.length > 0 && (
-                                        <div className="seal-tags">
-                                            {seal.parsedContent.tags.slice(0, 3).map((tag, tagIndex) => (
-                                                <span key={tagIndex} className="tag">
-                                                    <Tag size={12} />
-                                                    {tag}
-                                                </span>
-                                            ))}
-                                            {seal.parsedContent.tags.length > 3 && (
-                                                <span className="tag-more">+{seal.parsedContent.tags.length - 3}</span>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="seal-footer">
-                                    <div className="seal-time">
-                                        <Calendar size={14} />
-                                        <span>
-                                            {seal.isUnlocked
-                                                ? `已于 ${formatDate(seal.unlockTime)} 解锁`
-                                                : getTimeRemaining(seal.unlockTime)
-                                            }
-                                        </span>
-                                    </div>
-
-                                    <Link
-                                        to={`/seal/${seal.id}`}
-                                        className="btn btn-secondary seal-link"
-                                    >
-                                        查看详情
-                                    </Link>
-                                </div>
-
-                                {seal.mediaIds && (
-                                    <div className="media-indicator">
-                                        <span>📎 包含媒体文件</span>
-                                    </div>
-                                )}
-                            </motion.div>
-                        ))}
-                    </motion.div>
+                {seal.mediaIds && (
+                  <div className="media-indicator">
+                    <span>📎 包含媒体文件</span>
+                  </div>
                 )}
-            </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </div>
 
-            <style jsx>{`
+      <style jsx>{`
         .vault-page {
           min-height: 100vh;
           padding: 40px 0 80px;
@@ -322,7 +322,7 @@ const VaultPage = () => {
           font-size: 3rem;
           font-weight: 800;
           margin-bottom: 16px;
-          font-family: 'JetBrains Mono', monospace;
+          font-family: "JetBrains Mono", monospace;
         }
 
         .page-subtitle {
@@ -371,7 +371,9 @@ const VaultPage = () => {
           white-space: nowrap;
         }
 
-        .not-connected, .loading-state, .empty-state {
+        .not-connected,
+        .loading-state,
+        .empty-state {
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -381,13 +383,15 @@ const VaultPage = () => {
           gap: 24px;
         }
 
-        .not-connected-content h2, .empty-state h3 {
+        .not-connected-content h2,
+        .empty-state h3 {
           font-size: 2rem;
           margin: 0;
           color: white;
         }
 
-        .not-connected-content p, .empty-state p {
+        .not-connected-content p,
+        .empty-state p {
           color: rgba(255, 255, 255, 0.7);
           font-size: 1.1rem;
         }
@@ -447,7 +451,7 @@ const VaultPage = () => {
         }
 
         .seal-id {
-          font-family: 'JetBrains Mono', monospace;
+          font-family: "JetBrains Mono", monospace;
           color: rgba(255, 255, 255, 0.5);
           font-size: 14px;
         }
@@ -574,8 +578,8 @@ const VaultPage = () => {
           }
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 };
 
-export default VaultPage; 
+export default VaultPage;

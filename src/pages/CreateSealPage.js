@@ -147,7 +147,7 @@ const CreateSealPage = () => {
                 });
                 setFiles([]);
 
-                toast.success(`封印创建成功！封印ID: ${sealId}`);
+                toast.success(`封印创建成功！交易哈希: ${sealId.slice(0, 10)}...`);
             }
         } catch (error) {
             console.error('创建封印失败:', error);
