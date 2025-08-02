@@ -246,203 +246,428 @@ const SealDetailPage = () => {
 
   return (
     <div className="seal-detail-page">
+      {/* 背景粒子效果 */}
+      <div className="background-particles">
+        {[...Array(50)].map((_, i) => (
+          <div key={i} className="particle" style={{
+            left: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 20}s`,
+            animationDuration: `${15 + Math.random() * 10}s`
+          }} />
+        ))}
+      </div>
+
       <div className="container">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          initial={{ opacity: 0, y: -50, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 1, type: "spring", stiffness: 100 }}
           className="page-header"
         >
-          <button onClick={() => navigate('/vault')} className="back-btn">
+          <motion.button
+            onClick={() => navigate('/vault')}
+            className="back-btn"
+            whileHover={{ scale: 1.05, x: -5 }}
+            whileTap={{ scale: 0.95 }}
+          >
             <ArrowLeft size={20} />
             返回金库
-          </button>
+          </motion.button>
 
           <div className="seal-actions">
-            <button onClick={handleShare} className="btn btn-secondary action-btn">
+            <motion.button
+              onClick={handleShare}
+              className="btn btn-secondary action-btn"
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <Share2 size={16} />
               分享
-            </button>
+            </motion.button>
           </div>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
+          initial={{ opacity: 0, y: 100, rotateX: -15 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          transition={{ duration: 1.2, delay: 0.3, type: "spring", stiffness: 80 }}
           className="seal-detail-card"
         >
-          <div className="seal-header">
-            <div className="seal-status-section">
-              <div className={`seal-status ${seal.isUnlocked ? 'unlocked' : 'locked'}`}>
+          <motion.div
+            className="seal-header"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+          >
+            <motion.div
+              className="seal-status-section"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.7, duration: 0.6, type: "spring" }}
+            >
+              <motion.div
+                className={`seal-status ${seal.isUnlocked ? 'unlocked' : 'locked'}`}
+                whileHover={{ scale: 1.05 }}
+                animate={seal.isUnlocked ? {
+                  boxShadow: ["0 0 20px rgba(34, 197, 94, 0.3)", "0 0 40px rgba(34, 197, 94, 0.6)", "0 0 20px rgba(34, 197, 94, 0.3)"],
+                } : {
+                  boxShadow: ["0 0 20px rgba(239, 68, 68, 0.3)", "0 0 40px rgba(239, 68, 68, 0.6)", "0 0 20px rgba(239, 68, 68, 0.3)"],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
                 {seal.isUnlocked ? (
                   <>
-                    <Unlock size={24} />
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.6, delay: 0.8 }}
+                    >
+                      <Unlock size={24} />
+                    </motion.div>
                     <span>已解锁</span>
                   </>
                 ) : (
                   <>
-                    <Lock size={24} />
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <Lock size={24} />
+                    </motion.div>
                     <span>锁定中</span>
                   </>
                 )}
-              </div>
-              <div className="seal-id">封印 #{seal.id.slice(0, 6)}...{seal.id.slice(-4)}</div>
-            </div>
+              </motion.div>
+              <motion.div
+                className="seal-id"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 1, duration: 0.5 }}
+              >
+                封印 #{seal.id.slice(0, 6)}...{seal.id.slice(-4)}
+              </motion.div>
+            </motion.div>
 
-            <h1 className="seal-title">{seal.parsedContent.title}</h1>
+            <motion.h1
+              className="seal-title"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9, duration: 0.8 }}
+            >
+              {seal.parsedContent.title}
+            </motion.h1>
 
-            <div className="seal-meta">
-              <div className="meta-item">
-                <User size={16} />
-                <span>创建者: {seal.creator === account ? '您' : `${seal.creator.slice(0, 6)}...${seal.creator.slice(-4)}`}</span>
-              </div>
-              <div className="meta-item">
-                <Calendar size={16} />
-                <span>创建时间: {format(new Date(seal.parsedContent.createdAt), 'yyyy年MM月dd日 HH:mm')}</span>
-              </div>
-              <div className="meta-item">
-                <Clock size={16} />
-                <span>
-                  {seal.isUnlocked
-                    ? `解锁时间: ${formatDate(seal.unlockTime)}`
-                    : `将于 ${formatDate(seal.unlockTime)} 解锁`
-                  }
-                </span>
-              </div>
-            </div>
+            <motion.div
+              className="seal-meta"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.1, duration: 0.6 }}
+            >
+              {[
+                { icon: User, text: `创建者: ${seal.creator === account ? '您' : `${seal.creator.slice(0, 6)}...${seal.creator.slice(-4)}`}` },
+                { icon: Calendar, text: `创建时间: ${format(new Date(seal.parsedContent.createdAt), 'yyyy年MM月dd日 HH:mm')}` },
+                { icon: Clock, text: seal.isUnlocked ? `解锁时间: ${formatDate(seal.unlockTime)}` : `将于 ${formatDate(seal.unlockTime)} 解锁` }
+              ].map((item, index) => (
+                <motion.div
+                  key={index}
+                  className="meta-item"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 1.2 + index * 0.1, duration: 0.5 }}
+                  whileHover={{ x: 5, scale: 1.02 }}
+                >
+                  <item.icon size={16} />
+                  <span>{item.text}</span>
+                </motion.div>
+              ))}
+            </motion.div>
 
             {seal.parsedContent.emotion && (
-              <div className="emotion-section">
-                <Heart size={16} />
-                <span>当时心境: {seal.parsedContent.emotion}</span>
-              </div>
-            )}
-
-            {seal.parsedContent.tags && seal.parsedContent.tags.length > 0 && (
-              <div className="tags-section">
-                {seal.parsedContent.tags.map((tag, index) => (
-                  <span key={index} className="tag">
-                    <Tag size={12} />
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="seal-content-section">
-            {!seal.isUnlocked && !forceUnlock && timeRemaining && (
               <motion.div
-                className="countdown-section"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                className="emotion-section"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 1.5, duration: 0.6, type: "spring" }}
+                whileHover={{ scale: 1.05 }}
               >
-                <h3>距离解锁还有:</h3>
-                <div className="countdown">
-                  <div className="countdown-item">
-                    <span className="countdown-number">{timeRemaining.days}</span>
-                    <span className="countdown-label">天</span>
-                  </div>
-                  <div className="countdown-item">
-                    <span className="countdown-number">{timeRemaining.hours}</span>
-                    <span className="countdown-label">时</span>
-                  </div>
-                  <div className="countdown-item">
-                    <span className="countdown-number">{timeRemaining.minutes}</span>
-                    <span className="countdown-label">分</span>
-                  </div>
-                  <div className="countdown-item">
-                    <span className="countdown-number">{timeRemaining.seconds}</span>
-                    <span className="countdown-label">秒</span>
-                  </div>
-                </div>
-
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <Heart size={16} />
+                </motion.div>
+                <span>当时心境: {seal.parsedContent.emotion}</span>
               </motion.div>
             )}
 
-            <div className="content-section">
-              <h3>封印内容</h3>
-              <div className="content-text">
+            {seal.parsedContent.tags && seal.parsedContent.tags.length > 0 && (
+              <motion.div
+                className="tags-section"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.7, duration: 0.6 }}
+              >
+                {seal.parsedContent.tags.map((tag, index) => (
+                  <motion.span
+                    key={index}
+                    className="tag"
+                    initial={{ opacity: 0, scale: 0.5, rotate: -180 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    transition={{ delay: 1.8 + index * 0.1, duration: 0.5, type: "spring" }}
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
+                    <Tag size={12} />
+                    {tag}
+                  </motion.span>
+                ))}
+              </motion.div>
+            )}
+          </motion.div>
+
+          <motion.div
+            className="seal-content-section"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 2, duration: 0.8 }}
+          >
+            {!seal.isUnlocked && !forceUnlock && timeRemaining && (
+              <motion.div
+                className="countdown-section"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 2.2, duration: 0.8, type: "spring" }}
+              >
+                <motion.h3
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 2.4, duration: 0.6 }}
+                >
+                  距离解锁还有:
+                </motion.h3>
+                <div className="countdown">
+                  {[
+                    { value: timeRemaining.days, label: '天' },
+                    { value: timeRemaining.hours, label: '时' },
+                    { value: timeRemaining.minutes, label: '分' },
+                    { value: timeRemaining.seconds, label: '秒' }
+                  ].map((item, index) => (
+                    <motion.div
+                      key={index}
+                      className="countdown-item"
+                      initial={{ opacity: 0, scale: 0.5, rotateY: 90 }}
+                      animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                      transition={{ delay: 2.6 + index * 0.1, duration: 0.6, type: "spring" }}
+                      whileHover={{ scale: 1.1, rotateY: 10 }}
+                    >
+                      <motion.span
+                        className="countdown-number"
+                        key={item.value}
+                        initial={{ scale: 1.2, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        {item.value}
+                      </motion.span>
+                      <span className="countdown-label">{item.label}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            <motion.div
+              className="content-section"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 3, duration: 0.8 }}
+            >
+              <motion.h3
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 3.2, duration: 0.6 }}
+              >
+                封印内容
+              </motion.h3>
+              <motion.div
+                className="content-text"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 3.4, duration: 0.8 }}
+              >
                 {seal.isUnlocked || forceUnlock ? (
                   <>
                     {forceUnlock && !seal.isUnlocked && (
-                      <div className="force-unlock-warning">
+                      <motion.div
+                        className="force-unlock-warning"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 3.6, duration: 0.5 }}
+                      >
                         ⚠️ 您正在提前查看未解锁的封印内容
-                      </div>
+                      </motion.div>
                     )}
-                    <p>{seal.parsedContent.content}</p>
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 3.8, duration: 1 }}
+                    >
+                      {seal.parsedContent.content}
+                    </motion.p>
                   </>
                 ) : (
-                  <div className="locked-content">
-                    <Lock size={48} />
+                  <motion.div
+                    className="locked-content"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 3.6, duration: 0.8 }}
+                  >
+                    <motion.div
+                      animate={{
+                        rotate: [0, 10, -10, 0],
+                        scale: [1, 1.1, 1]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Lock size={48} />
+                    </motion.div>
                     <p>内容已被时间锁定，请等待解锁时间到达或使用强制查看</p>
-                    <button
+                    <motion.button
                       onClick={() => navigate('/vault')}
                       className="btn btn-secondary"
                       style={{ marginTop: '16px' }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       返回金库
-                    </button>
-                  </div>
+                    </motion.button>
+                  </motion.div>
                 )}
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
             {(seal.isUnlocked || forceUnlock) && seal.mediaIds && (
-              <div className="media-section">
-                <h3>媒体文件</h3>
+              <motion.div
+                className="media-section"
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 4, duration: 0.8 }}
+              >
+                <motion.h3
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 4.2, duration: 0.6 }}
+                >
+                  媒体文件
+                </motion.h3>
                 {loadingMedia ? (
-                  <div className="loading-media">
-                    <div className="spinner" />
+                  <motion.div
+                    className="loading-media"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 4.4, duration: 0.6 }}
+                  >
+                    <motion.div
+                      className="spinner"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
                     <p>正在加载媒体文件...</p>
-                  </div>
+                  </motion.div>
                 ) : mediaFiles.length > 0 ? (
-                  <div className="media-grid">
+                  <motion.div
+                    className="media-grid"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 4.4, duration: 0.8 }}
+                  >
                     {mediaFiles.map((media, index) => {
                       const Icon = getFileIcon(media.type);
                       return (
-                        <div key={index} className="media-item">
+                        <motion.div
+                          key={index}
+                          className="media-item"
+                          initial={{ opacity: 0, scale: 0.8, rotateY: 90 }}
+                          animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                          transition={{ delay: 4.6 + index * 0.2, duration: 0.6, type: "spring" }}
+                          whileHover={{ scale: 1.05, rotateY: 5 }}
+                        >
                           <div className="media-preview">
                             {media.type === 'image' ? (
-                              <img src={media.url} alt={media.name} />
+                              <motion.img
+                                src={media.url}
+                                alt={media.name}
+                                initial={{ opacity: 0, scale: 1.2 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 4.8 + index * 0.2, duration: 0.6 }}
+                              />
                             ) : media.type === 'video' ? (
-                              <video controls>
+                              <motion.video
+                                controls
+                                initial={{ opacity: 0, scale: 1.2 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 4.8 + index * 0.2, duration: 0.6 }}
+                              >
                                 <source src={media.url} type={media.mimeType} />
-                              </video>
+                              </motion.video>
                             ) : media.type === 'audio' ? (
-                              <audio controls>
+                              <motion.audio
+                                controls
+                                initial={{ opacity: 0, scale: 1.2 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 4.8 + index * 0.2, duration: 0.6 }}
+                              >
                                 <source src={media.url} type={media.mimeType} />
-                              </audio>
+                              </motion.audio>
                             ) : (
-                              <div className="file-placeholder">
-                                <Icon size={48} />
+                              <motion.div
+                                className="file-placeholder"
+                                initial={{ opacity: 0, scale: 1.2 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 4.8 + index * 0.2, duration: 0.6 }}
+                              >
+                                <motion.div
+                                  animate={{ rotate: [0, 10, -10, 0] }}
+                                  transition={{ duration: 3, repeat: Infinity }}
+                                >
+                                  <Icon size={48} />
+                                </motion.div>
                                 <span>{media.name}</span>
-                              </div>
+                              </motion.div>
                             )}
                           </div>
-                          <div className="media-info">
+                          <motion.div
+                            className="media-info"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 5 + index * 0.2, duration: 0.6 }}
+                          >
                             <span className="media-name">{media.name}</span>
-                            <a
+                            <motion.a
                               href={media.url}
                               download={media.name}
                               className="download-btn"
+                              whileHover={{ scale: 1.1, rotate: 5 }}
+                              whileTap={{ scale: 0.95 }}
                             >
                               <Download size={16} />
                               下载
-                            </a>
-                          </div>
-                        </div>
+                            </motion.a>
+                          </motion.div>
+                        </motion.div>
                       );
                     })}
-                  </div>
+                  </motion.div>
                 ) : (
-                  <p>暂无媒体文件</p>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 4.4, duration: 0.6 }}
+                  >
+                    暂无媒体文件
+                  </motion.p>
                 )}
-              </div>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
         </motion.div>
       </div>
 
@@ -450,12 +675,71 @@ const SealDetailPage = () => {
         .seal-detail-page {
           min-height: 100vh;
           padding: 40px 0 80px;
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(135deg, 
+            #0f0f23 0%, 
+            #1a1a2e 25%, 
+            #16213e 50%, 
+            #0f3460 75%, 
+            #0d2444 100%
+          );
+        }
+
+        .background-particles {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .particle {
+          position: absolute;
+          width: 2px;
+          height: 2px;
+          background: rgba(102, 126, 234, 0.6);
+          border-radius: 50%;
+          animation: float linear infinite;
+        }
+
+        @keyframes float {
+          0% {
+            transform: translateY(100vh) rotate(0deg);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-100px) rotate(360deg);
+            opacity: 0;
+          }
+        }
+
+        .particle:nth-child(2n) {
+          background: rgba(34, 197, 94, 0.4);
+          width: 3px;
+          height: 3px;
+        }
+
+        .particle:nth-child(3n) {
+          background: rgba(251, 191, 36, 0.5);
+          width: 1px;
+          height: 1px;
         }
 
         .container {
           max-width: 800px;
           margin: 0 auto;
           padding: 0 24px;
+          position: relative;
+          z-index: 1;
         }
 
         .loading-state, .error-state {
@@ -466,6 +750,8 @@ const SealDetailPage = () => {
           min-height: 50vh;
           text-align: center;
           gap: 24px;
+          position: relative;
+          z-index: 1;
         }
 
         .page-header {
@@ -473,6 +759,8 @@ const SealDetailPage = () => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 32px;
+          position: relative;
+          z-index: 2;
         }
 
         .back-btn {
@@ -480,20 +768,24 @@ const SealDetailPage = () => {
           align-items: center;
           gap: 8px;
           padding: 12px 20px;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(102, 126, 234, 0.3);
+          border-radius: 16px;
           color: white;
           text-decoration: none;
-          transition: all 0.3s ease;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
           font-family: inherit;
           font-size: 14px;
+          backdrop-filter: blur(20px);
+          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
         }
 
         .back-btn:hover {
-          background: rgba(255, 255, 255, 0.15);
-          transform: translateY(-1px);
+          background: rgba(102, 126, 234, 0.2);
+          border-color: rgba(102, 126, 234, 0.5);
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
         }
 
         .seal-actions {
@@ -506,155 +798,326 @@ const SealDetailPage = () => {
           align-items: center;
           gap: 8px;
           padding: 12px 20px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 16px;
+          backdrop-filter: blur(20px);
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-btn:hover {
+          background: rgba(255, 255, 255, 0.15);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
         }
 
         .seal-detail-card {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 24px;
-          padding: 40px;
-          backdrop-filter: blur(20px);
+          background: linear-gradient(145deg, 
+            rgba(255, 255, 255, 0.08) 0%, 
+            rgba(255, 255, 255, 0.03) 50%, 
+            rgba(255, 255, 255, 0.08) 100%
+          );
+          border: 1px solid rgba(102, 126, 234, 0.2);
+          border-radius: 32px;
+          padding: 48px;
+          backdrop-filter: blur(30px);
+          position: relative;
+          overflow: hidden;
+          box-shadow: 
+            0 20px 60px rgba(0, 0, 0, 0.3),
+            0 0 80px rgba(102, 126, 234, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          transform-style: preserve-3d;
+        }
+
+        .seal-detail-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(45deg, 
+            transparent 0%, 
+            rgba(102, 126, 234, 0.05) 20%, 
+            transparent 40%, 
+            rgba(34, 197, 94, 0.05) 60%, 
+            transparent 80%, 
+            rgba(251, 191, 36, 0.05) 100%
+          );
+          border-radius: 32px;
+          opacity: 0.7;
+          animation: shimmer 8s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.7; }
         }
 
         .seal-header {
           margin-bottom: 40px;
           padding-bottom: 32px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+          position: relative;
+          z-index: 1;
         }
 
         .seal-status-section {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 24px;
+          margin-bottom: 32px;
         }
 
         .seal-status {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 12px 20px;
-          border-radius: 16px;
-          font-weight: 600;
-          font-size: 1.1rem;
+          gap: 16px;
+          padding: 16px 28px;
+          border-radius: 24px;
+          font-weight: 700;
+          font-size: 1.2rem;
+          backdrop-filter: blur(20px);
+          position: relative;
+          overflow: hidden;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .seal-status.unlocked {
-          background: rgba(34, 197, 94, 0.2);
+          background: linear-gradient(135deg, 
+            rgba(34, 197, 94, 0.3) 0%, 
+            rgba(34, 197, 94, 0.2) 50%, 
+            rgba(34, 197, 94, 0.3) 100%
+          );
           color: #22c55e;
-          border: 1px solid rgba(34, 197, 94, 0.3);
+          border: 2px solid rgba(34, 197, 94, 0.5);
+          box-shadow: 
+            0 0 30px rgba(34, 197, 94, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .seal-status.locked {
-          background: rgba(239, 68, 68, 0.2);
+          background: linear-gradient(135deg, 
+            rgba(239, 68, 68, 0.3) 0%, 
+            rgba(239, 68, 68, 0.2) 50%, 
+            rgba(239, 68, 68, 0.3) 100%
+          );
           color: #ef4444;
-          border: 1px solid rgba(239, 68, 68, 0.3);
+          border: 2px solid rgba(239, 68, 68, 0.5);
+          box-shadow: 
+            0 0 30px rgba(239, 68, 68, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .seal-id {
           font-family: 'JetBrains Mono', monospace;
-          color: rgba(255, 255, 255, 0.5);
-          font-weight: 500;
+          color: rgba(255, 255, 255, 0.6);
+          font-weight: 600;
+          font-size: 1rem;
+          background: rgba(255, 255, 255, 0.05);
+          padding: 8px 16px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
         }
 
         .seal-title {
-          font-size: 2.5rem;
-          font-weight: 800;
-          color: white;
-          margin-bottom: 24px;
-          line-height: 1.2;
+          font-size: 3rem;
+          font-weight: 900;
+          background: linear-gradient(135deg, 
+            #ffffff 0%, 
+            #e0e7ff 30%, 
+            #c7d2fe 60%, 
+            #a5b4fc 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin-bottom: 32px;
+          line-height: 1.1;
+          text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+          font-family: 'JetBrains Mono', monospace;
         }
 
         .seal-meta {
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          margin-bottom: 24px;
+          gap: 16px;
+          margin-bottom: 32px;
         }
 
         .meta-item {
           display: flex;
           align-items: center;
-          gap: 8px;
-          color: rgba(255, 255, 255, 0.7);
-          font-size: 14px;
+          gap: 12px;
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 15px;
+          padding: 12px 16px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          backdrop-filter: blur(10px);
+          transition: all 0.3s ease;
+          cursor: default;
+        }
+
+        .meta-item:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(102, 126, 234, 0.3);
+          transform: translateX(8px);
         }
 
         .emotion-section {
           display: flex;
           align-items: center;
-          gap: 8px;
-          margin-bottom: 24px;
-          padding: 12px 16px;
-          background: rgba(251, 191, 36, 0.1);
-          border: 1px solid rgba(251, 191, 36, 0.2);
-          border-radius: 12px;
+          gap: 12px;
+          margin-bottom: 32px;
+          padding: 16px 24px;
+          background: linear-gradient(135deg, 
+            rgba(251, 191, 36, 0.2) 0%, 
+            rgba(251, 191, 36, 0.1) 50%, 
+            rgba(251, 191, 36, 0.2) 100%
+          );
+          border: 2px solid rgba(251, 191, 36, 0.3);
+          border-radius: 20px;
           color: #fbbf24;
+          backdrop-filter: blur(20px);
+          box-shadow: 0 0 30px rgba(251, 191, 36, 0.2);
+          font-weight: 600;
         }
 
         .tags-section {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 12px;
         }
 
         .tag {
           display: flex;
           align-items: center;
-          gap: 4px;
-          padding: 6px 12px;
-          background: rgba(102, 126, 234, 0.2);
+          gap: 6px;
+          padding: 10px 16px;
+          background: linear-gradient(135deg, 
+            rgba(102, 126, 234, 0.3) 0%, 
+            rgba(102, 126, 234, 0.2) 50%, 
+            rgba(102, 126, 234, 0.3) 100%
+          );
           color: #667eea;
-          border-radius: 8px;
+          border: 1px solid rgba(102, 126, 234, 0.4);
+          border-radius: 16px;
           font-size: 14px;
-          font-weight: 500;
+          font-weight: 600;
+          backdrop-filter: blur(15px);
+          box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+          transition: all 0.3s ease;
+        }
+
+        .tag:hover {
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
         }
 
         .seal-content-section h3 {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: white;
-          margin-bottom: 20px;
+          font-size: 1.8rem;
+          font-weight: 700;
+          background: linear-gradient(135deg, #ffffff, #e0e7ff, #c7d2fe);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin-bottom: 24px;
+          font-family: 'JetBrains Mono', monospace;
         }
 
         .countdown-section {
-          margin-bottom: 40px;
+          margin-bottom: 48px;
           text-align: center;
+          padding: 32px;
+          background: linear-gradient(145deg, 
+            rgba(255, 255, 255, 0.05) 0%, 
+            rgba(255, 255, 255, 0.02) 50%, 
+            rgba(255, 255, 255, 0.05) 100%
+          );
+          border: 1px solid rgba(102, 126, 234, 0.2);
+          border-radius: 24px;
+          backdrop-filter: blur(20px);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
         }
 
         .countdown-section h3 {
-          color: rgba(255, 255, 255, 0.8);
-          margin-bottom: 24px;
+          color: rgba(255, 255, 255, 0.9);
+          margin-bottom: 32px;
+          font-size: 1.6rem;
+          font-weight: 600;
         }
 
         .countdown {
           display: flex;
           justify-content: center;
-          gap: 24px;
+          gap: 32px;
+          flex-wrap: wrap;
         }
 
         .countdown-item {
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 20px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          min-width: 80px;
+          padding: 24px 20px;
+          background: linear-gradient(145deg, 
+            rgba(102, 126, 234, 0.15) 0%, 
+            rgba(102, 126, 234, 0.08) 50%, 
+            rgba(102, 126, 234, 0.15) 100%
+          );
+          border: 2px solid rgba(102, 126, 234, 0.3);
+          border-radius: 20px;
+          min-width: 100px;
+          backdrop-filter: blur(15px);
+          box-shadow: 
+            0 8px 32px rgba(102, 126, 234, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .countdown-item::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, 
+            transparent, 
+            rgba(255, 255, 255, 0.1), 
+            transparent
+          );
+          transition: left 0.6s ease;
+        }
+
+        .countdown-item:hover::before {
+          left: 100%;
         }
 
         .countdown-number {
-          font-size: 2rem;
-          font-weight: 800;
+          font-size: 2.5rem;
+          font-weight: 900;
           color: #667eea;
           font-family: 'JetBrains Mono', monospace;
+          text-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+          line-height: 1;
         }
 
         .countdown-label {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.6);
-          margin-top: 4px;
+          font-size: 16px;
+          color: rgba(255, 255, 255, 0.7);
+          margin-top: 8px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
 
         .force-unlock-section {
@@ -702,67 +1165,158 @@ const SealDetailPage = () => {
         }
 
         .content-section {
-          margin-bottom: 40px;
+          margin-bottom: 48px;
         }
 
         .content-text {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 16px;
-          padding: 24px;
+          background: linear-gradient(145deg, 
+            rgba(255, 255, 255, 0.05) 0%, 
+            rgba(255, 255, 255, 0.02) 50%, 
+            rgba(255, 255, 255, 0.05) 100%
+          );
+          border: 1px solid rgba(102, 126, 234, 0.2);
+          border-radius: 20px;
+          padding: 32px;
+          backdrop-filter: blur(20px);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .content-text::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(45deg, 
+            transparent 0%, 
+            rgba(102, 126, 234, 0.02) 50%, 
+            transparent 100%
+          );
+          border-radius: 20px;
         }
 
         .content-text p {
-          color: rgba(255, 255, 255, 0.9);
-          line-height: 1.7;
-          font-size: 1.1rem;
+          color: rgba(255, 255, 255, 0.95);
+          line-height: 1.8;
+          font-size: 1.2rem;
           margin: 0;
           white-space: pre-wrap;
+          position: relative;
+          z-index: 1;
+          font-weight: 400;
         }
 
         .locked-content {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 16px;
-          padding: 40px;
+          gap: 24px;
+          padding: 48px;
           text-align: center;
-          color: rgba(255, 255, 255, 0.5);
+          color: rgba(255, 255, 255, 0.6);
+          background: linear-gradient(145deg, 
+            rgba(239, 68, 68, 0.05) 0%, 
+            rgba(239, 68, 68, 0.02) 50%, 
+            rgba(239, 68, 68, 0.05) 100%
+          );
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: 20px;
+          backdrop-filter: blur(20px);
+        }
+
+        .locked-content p {
+          font-size: 1.1rem;
+          font-weight: 500;
         }
 
         .media-section {
-          margin-bottom: 20px;
+          margin-bottom: 32px;
         }
 
         .loading-media {
           display: flex;
           align-items: center;
-          gap: 16px;
-          padding: 24px;
+          justify-content: center;
+          gap: 20px;
+          padding: 40px;
           text-align: center;
-          color: rgba(255, 255, 255, 0.7);
+          color: rgba(255, 255, 255, 0.8);
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 20px;
+          backdrop-filter: blur(15px);
+        }
+
+        .spinner {
+          width: 32px;
+          height: 32px;
+          border: 3px solid rgba(102, 126, 234, 0.3);
+          border-top: 3px solid #667eea;
+          border-radius: 50%;
         }
 
         .media-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 24px;
         }
 
         .media-item {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 16px;
+          background: linear-gradient(145deg, 
+            rgba(255, 255, 255, 0.08) 0%, 
+            rgba(255, 255, 255, 0.03) 50%, 
+            rgba(255, 255, 255, 0.08) 100%
+          );
+          border: 1px solid rgba(102, 126, 234, 0.2);
+          border-radius: 20px;
           overflow: hidden;
+          backdrop-filter: blur(20px);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .media-item:hover {
+          transform: translateY(-8px) scale(1.02);
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          border-color: rgba(102, 126, 234, 0.4);
         }
 
         .media-preview {
           width: 100%;
-          height: 200px;
+          height: 220px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(0, 0, 0, 0.2);
+          background: linear-gradient(135deg, 
+            rgba(0, 0, 0, 0.3) 0%, 
+            rgba(0, 0, 0, 0.1) 50%, 
+            rgba(0, 0, 0, 0.3) 100%
+          );
+          overflow: hidden;
+          position: relative;
+        }
+
+        .media-preview::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(45deg, 
+            transparent 0%, 
+            rgba(102, 126, 234, 0.1) 50%, 
+            transparent 100%
+          );
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .media-item:hover .media-preview::before {
+          opacity: 1;
         }
 
         .media-preview img,
@@ -770,69 +1324,104 @@ const SealDetailPage = () => {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          transition: transform 0.4s ease;
+        }
+
+        .media-item:hover .media-preview img,
+        .media-item:hover .media-preview video {
+          transform: scale(1.05);
         }
 
         .media-preview audio {
-          width: 100%;
+          width: 90%;
         }
 
         .file-placeholder {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 12px;
-          color: rgba(255, 255, 255, 0.5);
+          gap: 16px;
+          color: rgba(255, 255, 255, 0.6);
+          padding: 20px;
         }
 
         .file-placeholder span {
-          font-size: 14px;
+          font-size: 15px;
           text-align: center;
           word-break: break-all;
+          font-weight: 500;
         }
 
         .media-info {
-          padding: 16px;
+          padding: 20px;
           display: flex;
           justify-content: space-between;
           align-items: center;
+          background: rgba(255, 255, 255, 0.02);
         }
 
         .media-name {
-          color: white;
-          font-weight: 500;
+          color: rgba(255, 255, 255, 0.9);
+          font-weight: 600;
           flex: 1;
-          margin-right: 12px;
+          margin-right: 16px;
           word-break: break-all;
+          font-size: 15px;
         }
 
         .download-btn {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 8px 12px;
-          background: rgba(102, 126, 234, 0.2);
+          gap: 8px;
+          padding: 10px 16px;
+          background: linear-gradient(135deg, 
+            rgba(102, 126, 234, 0.3) 0%, 
+            rgba(102, 126, 234, 0.2) 50%, 
+            rgba(102, 126, 234, 0.3) 100%
+          );
           color: #667eea;
-          border-radius: 8px;
+          border: 1px solid rgba(102, 126, 234, 0.4);
+          border-radius: 12px;
           text-decoration: none;
           font-size: 14px;
-          font-weight: 500;
+          font-weight: 600;
           transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
         }
 
         .download-btn:hover {
-          background: rgba(102, 126, 234, 0.3);
-          transform: translateY(-1px);
+          background: linear-gradient(135deg, 
+            rgba(102, 126, 234, 0.4) 0%, 
+            rgba(102, 126, 234, 0.3) 50%, 
+            rgba(102, 126, 234, 0.4) 100%
+          );
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
         }
 
         @media (max-width: 768px) {
+          .seal-detail-page {
+            padding: 20px 0 40px;
+          }
+
+          .container {
+            padding: 0 16px;
+          }
+
+          .background-particles {
+            display: none; /* 移动端隐藏粒子以提升性能 */
+          }
+
           .seal-title {
-            font-size: 2rem;
+            font-size: 2.2rem;
+            margin-bottom: 24px;
           }
 
           .page-header {
             flex-direction: column;
-            gap: 16px;
+            gap: 20px;
             align-items: stretch;
+            margin-bottom: 24px;
           }
 
           .seal-actions {
@@ -840,25 +1429,148 @@ const SealDetailPage = () => {
           }
 
           .seal-detail-card {
-            padding: 24px;
+            padding: 24px 20px;
+            border-radius: 24px;
+            margin: 0 -4px;
+          }
+
+          .seal-status-section {
+            flex-direction: column;
+            gap: 16px;
+            align-items: stretch;
+            margin-bottom: 24px;
+          }
+
+          .seal-status {
+            justify-content: center;
+            padding: 12px 20px;
+            font-size: 1rem;
+          }
+
+          .seal-meta {
+            gap: 12px;
+            margin-bottom: 24px;
+          }
+
+          .meta-item {
+            padding: 10px 14px;
+            font-size: 14px;
+          }
+
+          .emotion-section {
+            padding: 12px 18px;
+            font-size: 14px;
+          }
+
+          .countdown-section {
+            padding: 24px 16px;
+            margin-bottom: 32px;
           }
 
           .countdown {
-            flex-wrap: wrap;
             gap: 16px;
+            justify-content: space-around;
+          }
+
+          .countdown-item {
+            min-width: 70px;
+            padding: 16px 12px;
+          }
+
+          .countdown-number {
+            font-size: 1.8rem;
+          }
+
+          .countdown-label {
+            font-size: 12px;
+          }
+
+          .content-text {
+            padding: 24px 20px;
+          }
+
+          .content-text p {
+            font-size: 1.1rem;
+            line-height: 1.7;
+          }
+
+          .locked-content {
+            padding: 32px 20px;
+          }
+
+          .media-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+
+          .media-item {
+            margin: 0;
+          }
+
+          .media-preview {
+            height: 180px;
+          }
+
+          .media-info {
+            padding: 16px;
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+          }
+
+          .media-name {
+            margin-right: 0;
+            margin-bottom: 0;
+            text-align: center;
+          }
+
+          .download-btn {
+            justify-content: center;
+          }
+
+          .back-btn, .action-btn {
+            padding: 10px 16px;
+            font-size: 13px;
+          }
+
+          .tags-section {
+            gap: 8px;
+          }
+
+          .tag {
+            padding: 8px 12px;
+            font-size: 12px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .seal-title {
+            font-size: 1.8rem;
+          }
+
+          .seal-detail-card {
+            padding: 20px 16px;
+          }
+
+          .countdown {
+            gap: 12px;
           }
 
           .countdown-item {
             min-width: 60px;
-            padding: 16px;
+            padding: 12px 8px;
           }
 
           .countdown-number {
             font-size: 1.5rem;
           }
 
-          .media-grid {
-            grid-template-columns: 1fr;
+          .content-text {
+            padding: 20px 16px;
+          }
+
+          .content-text p {
+            font-size: 1rem;
           }
         }
       `}</style>
